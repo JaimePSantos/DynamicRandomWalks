@@ -25,7 +25,7 @@ The code might later be converted to a python package, so the following sections
 - NetworkX
 - qwak-sim
 
-> **Note**: `qwak-sim` is a separate package for simulating quantum walks. If you don't need the quantum walk functionality, it can be omitted.
+> **Note**: `qwak-sim` is a separate package for simulating quantum walks. This is mainly used for the plotting functions.
 
 ## Installation
 
