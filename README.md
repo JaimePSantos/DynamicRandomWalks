@@ -1,6 +1,6 @@
 # Discrete Time Random Walk Simulator
 
-This purpose of this project is to firstly investigate discrete-time random walks in dynamic graphs, by studying properties such as the cover time. The second step will be to apply these findings to quantum walks.
+This project aims to firstly investigate discrete-time random walks in dynamic graphs, by studying properties such as the cover time. The second step will be to apply these findings to quantum walks.
 
 The code might later be converted to a python package, so the following sections are a proof of concept, although you will need the dependencies if you want to experiment with the notebooks.
 
