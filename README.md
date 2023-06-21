@@ -48,6 +48,6 @@ Ensure that you have Python 3.7 or higher installed on your system. You can down
     pip install numpy scipy sympy matplotlib networkx qwak-sim
     ```
 
-## Documentatiop & Contribution
+## Documentation & Contribution
 
 Work in progress.
