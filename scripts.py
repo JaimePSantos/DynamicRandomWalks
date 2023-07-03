@@ -63,6 +63,7 @@ def draw_graph(H, figsize=(8, 6), k=0.1, draw_self_loops=True, config={}):
     edge_style = config.get('edge_style', 'solid')
     self_loop_color = config.get('self_loop_color', 'red')
     title = config.get('title', '')
+    draw_self_loops = config.get('draw_self_loops', True)
 
     # Get the weights of self-loops from adjacency matrix
     self_loop_weights = nx.to_numpy_array(H).diagonal()
