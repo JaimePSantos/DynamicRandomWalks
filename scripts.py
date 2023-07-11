@@ -54,9 +54,7 @@ def load_or_generate_data(file1, file2, generation_func1, generation_func2, args
     return data1, data2
 
 def draw_graph(H, figsize=(8, 6), k=0.1, draw_self_loops=True, config={}):
-    plt.figure(figsize=figsize)
-    
-    pos = nx.spring_layout(H, k=k)
+
     node_color = config.get('node_color', 'lightblue')
     node_size = config.get('node_size', 500)
     normal_edge_color = config.get('normal_edge_color', 'gray')
@@ -65,7 +63,11 @@ def draw_graph(H, figsize=(8, 6), k=0.1, draw_self_loops=True, config={}):
     self_loop_color = config.get('self_loop_color', 'red')
     title = config.get('title', '')
     draw_self_loops = config.get('draw_self_loops', True)
-
+    figsize = config.get('figsize', (8, 6))
+    
+    plt.figure(figsize=figsize)
+    
+    pos = nx.spring_layout(H, k=k)
     # Get the weights of self-loops from adjacency matrix
     self_loop_weights = nx.to_numpy_array(H).diagonal()
     max_weight = max(self_loop_weights) if self_loop_weights.any() else 1
