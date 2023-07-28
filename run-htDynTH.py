@@ -79,7 +79,7 @@ def theoretical_hitting_time(reps,epsilon,factor):
     
 epsilon = 0.50
 
-reps = 6
+reps = 8
 nrange2 = [3 + 3*rep for rep in range(1,reps)]
 nrange3 = [3 + 3*rep for rep in range(1,reps+1)]
 factor = 4.5
@@ -88,7 +88,7 @@ fromNode = 0
 toNode = -1
 
 
-samples = 10
+samples = 20
 
 
 hitting_times_file = f'Datasets/DynGraphsDTRW/hittingTimeV2TemporalHelix_N{nrange2[0]}-{nrange2[-1]}_EPS{epsilon}_S{samples}.txt'
