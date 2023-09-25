@@ -105,3 +105,9 @@ def draw_graph_from_adjacency_matrix(matrix):
     G = nx.from_numpy_array(matrix)
     nx.draw(G, with_labels=True)
     plt.show()
+    
+def print_matrix(matrix):
+    # Print rows with left and right border
+    for row in matrix:
+        print('|', end='')
+        print(' '.join(format(item, ".2f") for item in row), end=' |\n')

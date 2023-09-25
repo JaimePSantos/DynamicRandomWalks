@@ -9,75 +9,92 @@ import ast
 import numpy as np
 import json
 from sklearn.linear_model import LinearRegression
+import cupy as cp
 
-from scripts import load_list_from_file, write_list_to_file, load_or_generate_data, draw_graph, draw_graph_from_adjacency_matrix, print_matrix
+
+from scripts import load_list_from_file, write_list_to_file, load_or_generate_data, draw_graph, draw_graph_from_adjacency_matrix
 
 def direct_sum(A, B):
-    # Check if both matrices A and B are two-dimensional
     if A.ndim != 2 or B.ndim != 2:
         raise ValueError("Both input arrays should be two-dimensional")
         
-    # Create zero matrices that match the dimensions of the other input
-    zero_A = np.zeros((A.shape[0], B.shape[1]))
-    zero_B = np.zeros((B.shape[0], A.shape[1]))
+    zero_A = cp.zeros((A.shape[0], B.shape[1]))
+    zero_B = cp.zeros((B.shape[0], A.shape[1]))
     
-    # Concatenate these matrices appropriately to get the direct sum
-    top = np.hstack([A, zero_A]) # top part of the direct sum
-    bottom = np.hstack([zero_B, B]) # bottom part of the direct sum
+    top = cp.hstack([A, zero_A])
+    bottom = cp.hstack([zero_B, B])
     
-    return np.vstack([top, bottom]) # final direct sum
-    
+    return cp.vstack([top, bottom])
+
 def generate_triangular_graph(i):
-    G = nx.Graph()
-    G.add_edge(2*i, 2*i+2)
-    G.add_edge(2*i+1, 2*i+2)
-    return G
+    # Step 1: Create a Node List
+    nodes = [2*i, 2*i+1, 2*i+2]
+    
+    # Step 2: Initialize the Adjacency Matrix
+    n_nodes = 3*i + 3
+    adjacency_matrix = cp.zeros((n_nodes, n_nodes), dtype=int)
+    
+    # Step 3: Add Edges
+    adjacency_matrix[2*i, 2*i+2] = 1
+    adjacency_matrix[2*i+2, 2*i] = 1
+    adjacency_matrix[2*i+1, 2*i+2] = 1
+    adjacency_matrix[2*i+2, 2*i+1] = 1
+    
+    # Step 4: Reorder Rows and Columns
+    ordered_matrix = adjacency_matrix[nodes, :][:, nodes]
+    
+    return ordered_matrix
 
 def generate_reverse_triangular_graph(i):
-    G = nx.Graph()
-    # Add edges based on the repetition count
-    G.add_edge(3*i+2, 3*i+3)
-    G.add_edge(3*i+2, 3*i+4)
-    return G
-
-def rotation_matrix():
-    # Define the permutation matrix
-    P = np.array([
-        [0, 1, 0],
-        [0, 0, 1],
-        [1, 0, 0]
-    ])
-    return P
+    # Step 1: Create a Node List
+    nodes = [3*i, 3*i+1, 3*i+2]
     
-def direct_sum_triangular_graph(repetitions):
-    result_matrix = np.zeros((2,2))
+    # Step 2: Initialize the Adjacency Matrix
+    num_nodes = 3 * i + 3
+    adj_matrix = cp.zeros((num_nodes, num_nodes), dtype=cp.int32)
+    
+    # Step 3: Add Edges
+    adj_matrix[3 * i, 3 * i + 1] = adj_matrix[3 * i + 1, 3 * i] = 1
+    adj_matrix[3 * i, 3 * i + 2] = adj_matrix[3 * i + 2, 3 * i] = 1
+    
+    # Step 4: Reorder Rows and Columns
+    ordered_matrix = adj_matrix[nodes, :][:, nodes]
+    
+    return ordered_matrix
+
+def direct_sum_triangular_graph_cupy(repetitions):
+    result_matrix = cp.zeros((2,2))
     for i in range(repetitions):
-        G = generate_triangular_graph(i)
-        nodes = sorted(G.nodes())
-        adjacency_matrix = nx.adjacency_matrix(G, nodelist=nodes).todense()        
+        adjacency_matrix = generate_triangular_graph(i)     
         if i == 0:
             result_matrix = adjacency_matrix
         else:
             # Direct sum
             result_matrix = direct_sum(result_matrix, adjacency_matrix)
-
     return result_matrix
 
-def direct_sum_reverse_triangular_graph(repetitions):
+
+def direct_sum_reverse_triangular_graph_cupy(repetitions):
     # Initialize the result matrix to represent two disconnected nodes 0 and 1
-    result_matrix = np.zeros((2,2))
+    result_matrix = cp.zeros((2,2))
 
     for i in range(repetitions-1):
-        G = generate_reverse_triangular_graph(i)
-        nodes = sorted(G.nodes())
-        adjacency_matrix = nx.adjacency_matrix(G, nodelist=nodes).todense()
-        
+        adjacency_matrix = generate_reverse_triangular_graph(i)     
         # Direct sum
         result_matrix = direct_sum(result_matrix, adjacency_matrix)
     
     # After all repetitions, add an additional disconnected node
-    result_matrix = direct_sum(result_matrix, np.zeros((1,1)))
+    result_matrix = direct_sum(result_matrix, cp.zeros((1,1)))
     return result_matrix
+
+def rotation_matrix():
+    # Define the permutation matrix
+    P = cp.array([
+        [0, 1, 0],
+        [0, 0, 1],
+        [1, 0, 0]
+    ])
+    return P
 
 def direct_sum_rotation_matrix(repetitions):
     p = rotation_matrix()
@@ -87,14 +104,14 @@ def direct_sum_rotation_matrix(repetitions):
         result_matrix = direct_sum(result_matrix, p)
 
     return result_matrix
-    
+
 def add_new_vertex(adj_matrix, new_vertex_at_start, connect_to_vertices):
     """
     Adds a new vertex to the adjacency matrix at the beginning or the end and connects it to the specified vertices.
     """
     num_vertices = adj_matrix.shape[0] 
     # Create an extended adjacency matrix
-    extended_adj_matrix = np.zeros((num_vertices + 1, num_vertices + 1))
+    extended_adj_matrix = cp.zeros((num_vertices + 1, num_vertices + 1))
     # Copy the original adjacency matrix into the extended one
     if new_vertex_at_start:
         extended_adj_matrix[1:, 1:] = adj_matrix
@@ -117,7 +134,7 @@ def extend_rotation_matrix(rot_matrix, new_vertex_at_start):
     """
     num_vertices = rot_matrix.shape[0]
     # Create an extended rotation matrix
-    extended_rot_matrix = np.zeros((num_vertices + 1, num_vertices + 1))
+    extended_rot_matrix = cp.zeros((num_vertices + 1, num_vertices + 1))
     # Copy the original rotation matrix into the extended one
     if new_vertex_at_start:
         extended_rot_matrix[1:, 1:] = rot_matrix
@@ -137,7 +154,7 @@ def add_self_loops(adj_matrix):
     num_vertices = adj_matrix.shape[0]
     
     # Compute degree (number of neighbors) for each vertex
-    degree = np.sum(adj_matrix, axis=1)
+    degree = cp.sum(adj_matrix, axis=1)
 
     # Add self-loops according to the degree
     for vertex in range(num_vertices):
@@ -145,16 +162,15 @@ def add_self_loops(adj_matrix):
 
     return adj_matrix
 
-
 def rotate_triangular(adjm,rotMat):
-    rotated_matrix = np.dot(rotMat, np.dot(adjm, rotMat.T))
+    rotated_matrix = cp.dot(rotMat, cp.dot(adjm, rotMat.T))
     return rotated_matrix
 
-def generate_temporal_helix(repetitions, timeSteps):
-    triangularGraphMatrix = direct_sum_triangular_graph(repetitions=repetitions)
-    reverseTriangularGraphMatrix = direct_sum_reverse_triangular_graph(repetitions=repetitions)
+def generate_temporal_helix_cupy(repetitions, timeSteps):
+    triangularGraphMatrix = direct_sum_triangular_graph_cupy(repetitions=repetitions)
+    reverseTriangularGraphMatrix = direct_sum_reverse_triangular_graph_cupy(repetitions=repetitions)
 
-    graphMatrix = triangularGraphMatrix + reverseTriangularGraphMatrix
+    graphMatrix = cp.add(triangularGraphMatrix,reverseTriangularGraphMatrix)
     rotationMatrix = direct_sum_rotation_matrix(repetitions)
 
     # Add L , c0 and R nodes.
@@ -174,39 +190,39 @@ def generate_temporal_helix(repetitions, timeSteps):
     result_matrix = add_self_loops(result_matrix)
     return result_matrix
    
-def generate_static_temporal_helix(repetitions):
-    triangularGraphMatrix = direct_sum_triangular_graph(repetitions=repetitions)
-    reverseTriangularGraphMatrix = direct_sum_reverse_triangular_graph(repetitions=repetitions)
+# def generate_static_temporal_helix(repetitions):
+#     triangularGraphMatrix = direct_sum_triangular_graph(repetitions=repetitions)
+#     reverseTriangularGraphMatrix = direct_sum_reverse_triangular_graph(repetitions=repetitions)
 
-    graphMatrix = triangularGraphMatrix + reverseTriangularGraphMatrix
-    rotationMatrix = direct_sum_rotation_matrix(repetitions)
+#     graphMatrix = triangularGraphMatrix + reverseTriangularGraphMatrix
+#     rotationMatrix = direct_sum_rotation_matrix(repetitions)
 
-    # Add L , c0 and R nodes.
-    graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = True, connect_to_vertices=[0, 1])
-    graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = True, connect_to_vertices=[0])
-    graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = False,connect_to_vertices=[-2])
+#     # Add L , c0 and R nodes.
+#     graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = True, connect_to_vertices=[0, 1])
+#     graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = True, connect_to_vertices=[0])
+#     graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = False,connect_to_vertices=[-2])
     
-    result_matrix = add_self_loops(graphMatrix)
-    return result_matrix
+#     result_matrix = add_self_loops(graphMatrix)
+#     return result_matrix
   
-def exponential_temporal_helix(rep,epsilon):
-    n = (3+rep*3)/2
-    copies = math.floor(n**(1-epsilon))
-    graph0_2n = []
-    graph1_2n = []    
-    graph2_2n = []
-    print(f'number of reps: {rep} \tnumber of copies: {copies}')
-    for i in range(1,copies+1):
-        graph0_2n.append(generate_temporal_helix(rep, 0))
-        graph1_2n.append(generate_temporal_helix(rep, 1))
-        graph2_2n.append(generate_temporal_helix(rep, 2))
+# def exponential_temporal_helix(rep,epsilon):
+#     n = (3+rep*3)/2
+#     copies = math.floor(n**(1-epsilon))
+#     graph0_2n = []
+#     graph1_2n = []    
+#     graph2_2n = []
+#     print(f'number of reps: {rep} \tnumber of copies: {copies}')
+#     for i in range(1,copies+1):
+#         graph0_2n.append(generate_temporal_helix(rep, 0))
+#         graph1_2n.append(generate_temporal_helix(rep, 1))
+#         graph2_2n.append(generate_temporal_helix(rep, 2))
             
-    return graph0_2n,graph1_2n,graph2_2n
+#     return graph0_2n,graph1_2n,graph2_2n
 
 
-def multiple_exponential_temporal_helix(repetitions, epsilon):
-    graphList = []
-    for rep in repetitions:
-        graph0,graph1,graph2 = exponential_temporal_helix(rep,epsilon)
-        graphList.append(graph0+graph1+graph2)
-    return graphList
+# def multiple_exponential_temporal_helix(repetitions, epsilon):
+#     graphList = []
+#     for rep in repetitions:
+#         graph0,graph1,graph2 = exponential_temporal_helix(rep,epsilon)
+#         graphList.append(graph0+graph1+graph2)
+#     return graphList
