@@ -173,7 +173,31 @@ def generate_temporal_helix(repetitions, timeSteps):
     
     result_matrix = add_self_loops(result_matrix)
     return result_matrix
-   
+
+def generate_temporal_helix2(repetitions, timeSteps):
+    triangularGraphMatrix = direct_sum_triangular_graph(repetitions=repetitions)
+    reverseTriangularGraphMatrix = direct_sum_reverse_triangular_graph(repetitions=repetitions)
+
+    graphMatrix = triangularGraphMatrix + reverseTriangularGraphMatrix
+    rotationMatrix = direct_sum_rotation_matrix(repetitions)
+
+    # Add L , c0 and R nodes.
+    graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = True, connect_to_vertices=[0, 1])
+    graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = True, connect_to_vertices=[0])
+    graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = False,connect_to_vertices=[-2])
+
+    # Extend the rotation matrix to accommodate the new vertices
+    rotationMatrix = extend_rotation_matrix(rotationMatrix, new_vertex_at_start=True)
+    rotationMatrix = extend_rotation_matrix(rotationMatrix, new_vertex_at_start=True)
+    rotationMatrix = extend_rotation_matrix(rotationMatrix, new_vertex_at_start=False)
+
+    result_matrix = graphMatrix
+    for _ in range(timeSteps):
+        result_matrix = rotate_triangular(result_matrix, rotationMatrix)
+    
+    # result_matrix = add_self_loops(result_matrix)
+    return result_matrix
+
 def generate_static_temporal_helix(repetitions):
     triangularGraphMatrix = direct_sum_triangular_graph(repetitions=repetitions)
     reverseTriangularGraphMatrix = direct_sum_reverse_triangular_graph(repetitions=repetitions)
@@ -188,6 +212,21 @@ def generate_static_temporal_helix(repetitions):
     
     result_matrix = add_self_loops(graphMatrix)
     return result_matrix
+
+def generate_static_temporal_helix2(repetitions):
+    triangularGraphMatrix = direct_sum_triangular_graph(repetitions=repetitions)
+    reverseTriangularGraphMatrix = direct_sum_reverse_triangular_graph(repetitions=repetitions)
+
+    graphMatrix = triangularGraphMatrix + reverseTriangularGraphMatrix
+    rotationMatrix = direct_sum_rotation_matrix(repetitions)
+
+    # Add L , c0 and R nodes.
+    graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = True, connect_to_vertices=[0, 1])
+    graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = True, connect_to_vertices=[0])
+    graphMatrix = add_new_vertex(graphMatrix, new_vertex_at_start = False,connect_to_vertices=[-2])
+    
+    # result_matrix = add_self_loops(graphMatrix)
+    return graphMatrix
   
 def exponential_temporal_helix(rep,epsilon):
     n = (3+rep*3)/2
